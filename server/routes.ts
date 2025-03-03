@@ -2,10 +2,10 @@ import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import { insertMessageSchema } from "@shared/schema";
-import fetch from "node-fetch"; // or "cross-fetch"
+import fetch from "node-fetch";
 
 export async function registerRoutes(app: Express) {
-  // Existing endpoints ----------------------------------------
+  // existing routes
   app.get("/api/messages", async (_req, res) => {
     const messages = await storage.getMessages();
     res.json(messages);
@@ -21,40 +21,48 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // NEW ENDPOINT: parseTransaction ----------------------------
+  // NEW parseTransaction route
   app.post("/api/parseTransaction", async (req, res) => {
     try {
       const { prompt } = req.body;
       if (!prompt || typeof prompt !== "string") {
+        console.log("[DEBUG] Missing or invalid prompt. Body:", req.body);
         return res.status(400).json({ error: "Missing or invalid prompt" });
       }
 
-      // 1) Call your Python Repl API:
+      console.log("[DEBUG /api/parseTransaction] Received prompt:", prompt);
+
+      // Call your Python API
       const pythonUrl = "https://cryptoface-api-willjrhodes20.replit.app/agent";
-      const parseResp = await fetch(pythonUrl, {
+      const fetchResp = await fetch(pythonUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
 
-      if (!parseResp.ok) {
-        const errTxt = await parseResp.text();
-        return res
-          .status(parseResp.status)
-          .json({ error: `Python parse error: ${errTxt.slice(0, 200)}` });
+      console.log("[DEBUG /api/parseTransaction] pythonUrl:", pythonUrl);
+      console.log("[DEBUG /api/parseTransaction] fetchResp status:", fetchResp.status);
+
+      if (!fetchResp.ok) {
+        const errTxt = await fetchResp.text();
+        console.log("[DEBUG /api/parseTransaction] Python parse error:", errTxt);
+        return res.status(fetchResp.status).json({ error: errTxt });
       }
 
-      // 2) Return the JSON from Python to the front end
-      const parseData = await parseResp.json();
-      // parseData typically: { done: true, messages: [...], parsed: {...} }
+      // Parse the JSON from Python
+      const parseData = await fetchResp.json();
 
-      res.json(parseData);
+      console.log("[DEBUG /api/parseTransaction] parseData from Python:", parseData);
+
+      // Return the parse data to the front end
+      return res.json(parseData);
+
     } catch (err) {
-      console.error("Error in /api/parseTransaction:", err);
-      res.status(500).json({ error: "Internal parseTransaction error." });
+      console.error("[ERROR /api/parseTransaction]", err);
+      return res.status(500).json({ error: "Internal parseTransaction error." });
     }
   });
 
-  // Return the HTTP server for your index.ts to use
   return createServer(app);
 }
+
