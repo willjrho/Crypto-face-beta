@@ -8,15 +8,15 @@ import { Send, Loader2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Message } from "@shared/schema";
+import { ethers } from "ethers";
 
-/** The shape of the parse response from /api/parseTransaction */
 interface ParseData {
   done: boolean;
   messages: string[];
   parsed: {
-    amount: string;
-    currency: string;
-    recipient: string;
+    amount: string; // e.g. "0.00000001"
+    currency: string; // e.g. "BTC"
+    recipient: string; // e.g. "0x..."
   } | null;
 }
 
@@ -37,12 +37,12 @@ export default function Chat() {
     }
   }, [isConnected, navigate]);
 
-  // 1) Load chat messages from /api/messages
+  // 1) Load chat messages
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ["/api/messages"],
   });
 
-  // 2) Send a chat message
+  // 2) Send chat message
   const sendMessage = useMutation({
     mutationFn: async (content: string) => {
       await apiRequest("POST", "/api/messages", {
@@ -56,7 +56,7 @@ export default function Chat() {
     },
   });
 
-  // 3) parseTransaction mutation => calls /api/parseTransaction
+  // 3) parseTransaction => calls /api/parseTransaction
   const parseTransaction = useMutation({
     mutationFn: async (prompt: string) => {
       console.log("[DEBUG parseTransaction] sending prompt =>", prompt);
@@ -84,7 +84,7 @@ export default function Chat() {
     }
   };
 
-  // 5) Sign & Submit Transaction via Taho
+  // 5) Sign & Submit Transaction with Ethers
   async function handleSignTx() {
     if (!parseResult || !parseResult.parsed) {
       alert("No parsed transaction data available.");
@@ -93,45 +93,46 @@ export default function Chat() {
 
     const { amount, currency, recipient } = parseResult.parsed;
 
+    // If your currency is truly "BTC" on an EVM chain, we treat it as the native token.
+    // If it's real Bitcoin, you'd need a separate flow.
+    // We'll assume it's an EVM-based chain with a "BTC" symbol.
+
     if (typeof window.ethereum === "undefined") {
       alert("No Ethereum provider found (Taho/MetaMask).");
       return;
     }
 
     try {
-      // Request accounts if not already connected
+      // 1) Request accounts if not already connected
       await window.ethereum.request({ method: "eth_requestAccounts" });
-      const accounts: string[] = await window.ethereum.request({
-        method: "eth_accounts",
-      });
-      const fromAddress = accounts[0];
+      // 2) Create an Ethers provider from the injected window.ethereum
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      // 3) Get a signer for the user's account
+      const signer = provider.getSigner();
 
-      // Convert the parsed amount to Wei (assuming 18 decimals on an EVM chain)
-      const amtNum = parseFloat(amount) || 0;
-      const amountWei = BigInt(Math.floor(amtNum * 1e18)).toString(16);
+      // 4) Convert the parsed 'amount' from ether units to wei
+      // If amount is "0.00000001", parseEther will handle it as a string
+      const amtWei = ethers.utils.parseEther(amount);
 
-      // Build minimal transaction params
-      const txParams = {
-        from: fromAddress,
+      // 5) Build transaction object
+      const tx = {
         to: recipient,
-        value: "0x" + amountWei,
-        // You can add chainId, gas, gasPrice, data, etc. if needed
+        value: amtWei,
+        // If you need chainId, gasLimit, gasPrice, data, etc., add them here
       };
 
-      console.log("[DEBUG] Sending txParams =>", txParams);
-      const txHash = await window.ethereum.request({
-        method: "eth_sendTransaction",
-        params: [txParams],
-      });
+      console.log("[DEBUG] handleSignTx => sending transaction", tx);
+      // 6) Send transaction => Taho will pop up for user to sign
+      const txResponse = await signer.sendTransaction(tx);
+      console.log("[DEBUG] Transaction response =>", txResponse);
 
-      alert(`Transaction submitted!\nTx Hash: ${txHash}`);
+      alert(`Transaction submitted!\nTx Hash: ${txResponse.hash}`);
     } catch (err: any) {
       console.error("Transaction sign error:", err);
       alert("Sign/Submit error: " + err.message);
     }
   }
 
-  // If loading chat messages
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
