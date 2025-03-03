@@ -4,9 +4,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-
-// IMPORTS FOR V6
-import { BrowserProvider, parseEther } from "ethers";
+import { BrowserProvider, parseEther, parseUnits, Contract } from "ethers";
 
 interface ParseData {
   done: boolean;
@@ -17,6 +15,14 @@ interface ParseData {
     recipient: string;
   } | null;
 }
+
+// Minimal ERC20 ABI (just transfer)
+const ERC20_ABI = [
+  "function transfer(address to, uint256 amount) external returns (bool)",
+];
+
+// Replace this with your actual mUSD contract address on the chain you’re using
+const MUSD_ADDRESS = "0xe2f2a5C287993345a840Db3B0845fbC70f5935a5";
 
 export default function Chat() {
   const { address, isConnected } = useWallet();
@@ -79,22 +85,35 @@ export default function Chat() {
     }
 
     try {
-      // Request account access
       await window.ethereum.request({ method: "eth_requestAccounts" });
-
-      // In Ethers v6, use BrowserProvider
       const provider = new BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
-      // parseEther is imported from 'ethers' top-level
-      const amtWei = parseEther(amount);
+      let txResponse;
+      if (
+        currency.toLowerCase() === "eth" ||
+        currency.toLowerCase() === "matic" ||
+        currency.toLowerCase() === "btc" // if your chain's native token is labeled "BTC"
+      ) {
+        // Native currency transfer
+        const amtWei = parseEther(amount);
+        const txParams = {
+          to: recipient,
+          value: amtWei,
+        };
+        txResponse = await signer.sendTransaction(txParams);
+      } else if (currency.toLowerCase() === "musd") {
+        // ERC-20 token transfer
+        const contract = new Contract(MUSD_ADDRESS, ERC20_ABI, signer);
+        // Typically mUSD has 18 decimals, parseUnits(amount, 18)
+        const amtTokens = parseUnits(amount, 18);
+        txResponse = await contract.transfer(recipient, amtTokens);
+      } else {
+        throw new Error(
+          `Unsupported token: ${currency}. Consider adding a fallback for unknown tokens.`,
+        );
+      }
 
-      const txParams = {
-        to: recipient,
-        value: amtWei,
-      };
-
-      const txResponse = await signer.sendTransaction(txParams);
       setTxHash(txResponse.hash);
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to send transaction.");
