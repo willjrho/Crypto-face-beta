@@ -40,19 +40,19 @@ export default function Landing() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl px-4">
         <Card className="p-6 text-center">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Crypto Copilot</CardTitle>
+            <CardTitle className="text-lg font-medium">Crypto Copilot</CardTitle>
           </CardHeader>
         </Card>
 
         <Card className="p-6 text-center">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Agent Dev Tools</CardTitle>
+            <CardTitle className="text-lg font-medium">Agent Dev Tools</CardTitle>
           </CardHeader>
         </Card>
 
         <Card className="p-6 text-center">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Agent Marketplace</CardTitle>
+            <CardTitle className="text-lg font-medium">Agent Marketplace</CardTitle>
           </CardHeader>
         </Card>
       </div>
