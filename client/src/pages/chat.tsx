@@ -36,7 +36,7 @@ export default function Chat() {
     }
   }, [isConnected, navigate]);
 
-  // Chat messages
+  // Load chat messages
   const { data: messages = [], isLoading } = useQuery<Message[]>({
     queryKey: ["/api/messages"],
   });
@@ -58,12 +58,14 @@ export default function Chat() {
   // parseTransaction
   const parseTransaction = useMutation({
     mutationFn: async (prompt: string) => {
-      // Call your Node route => which calls Python
+      console.log("[DEBUG parseTransaction] sending prompt =>", prompt);
       const resp = await apiRequest("POST", "/api/parseTransaction", { prompt });
+      console.log("[DEBUG parseTransaction] raw =>", resp);
+      // Return the response as our ParseData
       return resp as ParseData;
     },
     onSuccess: (data) => {
-      console.log("[DEBUG parseTransaction] data =>", data);
+      console.log("[DEBUG parseTransaction onSuccess] =>", data);
       setParseResult(data);
     },
     onError: (err) => {
@@ -80,14 +82,42 @@ export default function Chat() {
     }
   };
 
-  // Sign transaction (Taho) function
+  // Example sign transaction (Taho) function
   async function handleSignTx() {
     if (!parseResult || !parseResult.parsed) {
       alert("No parsed transaction data available.");
       return;
     }
-    // ...
-    // omitted for brevity
+    const { amount, currency, recipient } = parseResult.parsed;
+    if (typeof window.ethereum === "undefined") {
+      alert("No Ethereum provider found (Taho/MetaMask).");
+      return;
+    }
+    try {
+      // Request accounts if not connected
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      const accounts: string[] = await window.ethereum.request({ method: "eth_accounts" });
+      const fromAddress = accounts[0];
+
+      // Convert to Wei, for example
+      const amtNum = parseFloat(amount) || 0;
+      const amountWei = BigInt(Math.floor(amtNum * 1e18)).toString(16);
+
+      const txParams = {
+        from: fromAddress,
+        to: recipient,
+        value: "0x" + amountWei,
+      };
+
+      const txHash = await window.ethereum.request({
+        method: "eth_sendTransaction",
+        params: [txParams],
+      });
+      alert(`Transaction submitted!\nTx Hash: ${txHash}`);
+    } catch (err: any) {
+      console.error("Transaction sign error:", err);
+      alert("Sign/Submit error: " + err.message);
+    }
   }
 
   if (isLoading) {
@@ -130,7 +160,6 @@ export default function Chat() {
         </div>
       </form>
 
-      {/* Divider */}
       <hr />
 
       {/* Transaction parse UI */}
