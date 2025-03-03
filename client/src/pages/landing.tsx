@@ -42,7 +42,7 @@ export default function Landing() {
           CryptoFace Beta
         </h1>
         <p className="text-lg text-muted-foreground text-center mb-16">
-          A new AgentiFi layer to make crypto ui as easy as speaking
+          A new AgentiFi layer to make crypto ui as easy as speaking - coming soon to Mezo
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl px-4">
