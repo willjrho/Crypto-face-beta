@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
+import { ethers } from "ethers";
 
 interface ParseData {
   done: boolean;
@@ -22,7 +23,7 @@ export default function Chat() {
 
   // State for the transaction prompt
   const [txPrompt, setTxPrompt] = useState("");
-  // State for the parse result from the API
+  // Holds the parse result from the API
   const [parseResult, setParseResult] = useState<ParseData | null>(null);
   const [loadingParse, setLoadingParse] = useState<boolean>(false);
 
@@ -32,7 +33,7 @@ export default function Chat() {
     }
   }, [isConnected, navigate]);
 
-  // This function calls your Node API at /api/parseTransaction
+  // Call the Node API to parse the transaction prompt.
   async function handleParseTx() {
     if (!txPrompt.trim()) return;
     setLoadingParse(true);
@@ -55,18 +56,52 @@ export default function Chat() {
     }
   }
 
-  // Placeholder for the signing function (to be integrated with Taho)
+  // Use ethers.js to sign and send the transaction via the user's wallet.
   async function handleSignTx() {
     if (!parseResult || !parseResult.parsed) {
       alert("No parsed transaction data available.");
       return;
     }
-    // Here you would build a transaction object and call Taho's window.ethereum.request
-    // For now, we just alert the user.
-    alert(
-      "Here, push data to Taho wallet for signing:\n" +
-        JSON.stringify(parseResult.parsed, null, 2),
-    );
+
+    const { amount, currency, recipient } = parseResult.parsed;
+
+    // Ensure that an Ethereum provider is available
+    if (typeof window.ethereum === "undefined") {
+      alert("No Ethereum provider found (Taho/MetaMask).");
+      return;
+    }
+
+    try {
+      // Request account access if needed
+      await window.ethereum.request({ method: "eth_requestAccounts" });
+      // Create an Ethers provider from window.ethereum
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      // Get the signer for the currently connected account
+      const signer = provider.getSigner();
+
+      // Convert the parsed amount to wei.
+      // Note: This assumes the parsed amount is in ether units.
+      const amtWei = ethers.utils.parseEther(amount);
+
+      // Build the transaction object.
+      // If the currency is "BTC" (used as a native token on your EVM chain), treat it as such.
+      const txParams = {
+        to: recipient,
+        value: amtWei,
+        // Optionally, add chainId, gasLimit, gasPrice, etc.
+      };
+
+      console.log("[DEBUG] handleSignTx sending txParams:", txParams);
+
+      // Send the transaction using the signer. Taho or MetaMask will prompt the user to sign.
+      const txResponse = await signer.sendTransaction(txParams);
+      console.log("[DEBUG] Transaction response:", txResponse);
+
+      alert(`Transaction submitted!\nTx Hash: ${txResponse.hash}`);
+    } catch (err: any) {
+      console.error("Transaction sign error:", err);
+      alert("Sign/Submit error: " + err.message);
+    }
   }
 
   return (
