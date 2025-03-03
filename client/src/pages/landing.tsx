@@ -64,6 +64,11 @@ export default function Landing() {
             </CardHeader>
           </Card>
         </div>
+
+        {/* Mezo Logo */}
+        <div className="mt-16">
+          <img src="/attached_assets/mezoLogo.png" alt="Mezo Logo" className="h-16 w-auto" />
+        </div>
       </main>
     </div>
   );
