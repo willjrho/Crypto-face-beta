@@ -134,7 +134,7 @@ export default function Chat() {
       </div>
 
       {parseResult && (
-        <Card className="p-4 bg-gray-50">
+        <Card className="p-4 bg-black text-white">
           <pre className="text-sm mb-2">
             {JSON.stringify(parseResult, null, 2)}
           </pre>
