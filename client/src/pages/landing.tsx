@@ -30,7 +30,7 @@ export default function Landing() {
                 Connecting...
               </>
             ) : (
-              "Connect Wallet"
+              "Connect with Taho"
             )}
           </Button>
         </div>
