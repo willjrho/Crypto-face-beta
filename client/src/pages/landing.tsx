@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { useWallet } from "@/lib/web3";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Landing() {
   const { connect, isConnecting } = useWallet();
@@ -41,27 +41,18 @@ export default function Landing() {
         <Card className="p-6 text-center">
           <CardHeader>
             <CardTitle className="text-xl font-semibold">Crypto Copilot</CardTitle>
-            <CardDescription className="mt-2">
-              Your AI-powered assistant for navigating the crypto world
-            </CardDescription>
           </CardHeader>
         </Card>
 
         <Card className="p-6 text-center">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Dev Tools</CardTitle>
-            <CardDescription className="mt-2">
-              Powerful development tools for blockchain applications
-            </CardDescription>
+            <CardTitle className="text-xl font-semibold">Agent Dev Tools</CardTitle>
           </CardHeader>
         </Card>
 
         <Card className="p-6 text-center">
           <CardHeader>
-            <CardTitle className="text-xl font-semibold">Marketplace</CardTitle>
-            <CardDescription className="mt-2">
-              Discover and trade digital assets seamlessly
-            </CardDescription>
+            <CardTitle className="text-xl font-semibold">Agent Marketplace</CardTitle>
           </CardHeader>
         </Card>
       </div>
